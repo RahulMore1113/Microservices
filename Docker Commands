@@ -1,0 +1,61 @@
+-------------------------------------------------------------------------------------------------------------
+						Running a Spring Boot App as a container using Dockerfile
+-------------------------------------------------------------------------------------------------------------
+1. Run cmd in cmd
+	mvn clean install [from maven source location]
+2. Create
+	Dockerfile
+3. Run cmd in cmd
+	docker build . -t rahulmore1113/accounts:s4
+4. Run cmd
+	docker run -d -p 8080:8080 rahulmore1113/accounts:s4
+
+-------------------------------------------------------------------------------------------------------------
+						Running a Spring Boot App as a container using Buildpacks
+-------------------------------------------------------------------------------------------------------------
+1. Add configuration in pom.xml file of project under [spring boot maven plugin] in configuration section
+					<image>
+                        <name>rahulmore1113/${project.artifactId}:s4</name>
+                    </image>
+2. Run maven cmd
+	mvn spring-boot:build-image
+3. Run cmd
+	docker run -d -p 8090:8090 rahulmore1113/loans:s4
+
+-------------------------------------------------------------------------------------------------------------
+						Running a Spring Boot App as a container using Google Jib
+-------------------------------------------------------------------------------------------------------------
+1. Add configuration in pom.xml file of project under [spring boot maven plugin] in plugins section
+	with image name
+			<plugin>
+                <groupId>com.google.cloud.tools</groupId>
+                <artifactId>jib-maven-plugin</artifactId>
+                <version>3.4.6</version>
+                <configuration>
+                    <to>
+                        <image>rahulmore1113/${project.artifactId}:s4</image>
+                    </to>
+                </configuration>
+            </plugin>
+2. Run maven cmd
+	mvn compile jib:dockerBuild
+3. Run cmd
+	docker run -d -p 9000:9000 rahulmore1113/cards:s4
+
+-------------------------------------------------------------------------------------------------------------
+						Pushing Docker Local Image to Remote Docker Hub Repository
+-------------------------------------------------------------------------------------------------------------
+1. Run cmd
+	docker image push docker.io/rahulmore1113/accounts:s4
+	docker image push docker.io/rahulmore1113/loans:s4
+	docker image push docker.io/rahulmore1113/cards:s4
+
+-------------------------------------------------------------------------------------------------------------
+						Docker Compose to Run all containers using single cmd
+-------------------------------------------------------------------------------------------------------------
+1. Create Docker Compose file
+2. To start all container Run docker cmd from same location where docker compose file is available
+	docker compose up -d
+3. To start all container Run docker cmd from same location where docker compose file is available
+	docker compose down
+
