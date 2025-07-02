@@ -135,7 +135,7 @@
                 <version>3.4.6</version>
                 <configuration>
                     <to>
-                        <image>rahulmore1113/${project.artifactId}:s4</image>
+                        <image>rahulmore1113/${project.artifactId}:s6</image>
                     </to>
                 </configuration>
             </plugin>
