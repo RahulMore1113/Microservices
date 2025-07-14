@@ -4,6 +4,10 @@ server:
 spring:
   application:
     name: loans
+  config:
+    import: "optional:configserver:http://localhost:8071/"
+  profiles:
+    active: "prod"
   datasource:
     url: jdbc:h2:mem:test
     username: sa
@@ -19,22 +23,14 @@ spring:
   h2:
     console:
       enabled: true
-  config:
-    import:
-      - "application_qa.yml"
-      - "application_prod.yml"
-    profiles:
-      active:
-        - "qa"
+  rabbitmq:
+    host: "localhost"
+    port: 5672
+    username: "guest"
+    password: "guest"
 
-build:
-  version: "3.0"
-
-loans:
-  message: "Welcome to EazyBank loans related local APIs "
-  contactDetails:
-    name: "Amaal Grega - Developer"
-    email: "amaal@eazybank.com"
-  onCallSupport:
-    - (452) 456-2176
-    - (546) 764-8934
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
