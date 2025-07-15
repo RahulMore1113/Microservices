@@ -1,41 +1,27 @@
-#version: "3.8"
+# Docker Compose file for EazyBank microservices
 
-x-network-deploy-services: &network-deploy-services
-  networks:
-    - eazybank
-
-x-microservice-base-config: &microservice-base-config
-  <<: *network-deploy-services
-  deploy:
-    resources:
-      limits:
-        memory: 700m
-  environment:
-    SPRING_RABBITMQ_HOST: "rabbit"
-
-x-microservice-configserver-config: &microservice-configserver-config
-  <<: *microservice-base-config
-  environment:
-    SPRING_PROFILES_ACTIVE: prod
-    SPRING_CONFIG_IMPORT: "configserver:http://configserver:8071/"
+version: "3.8"
 
 services:
+  # RabbitMQ service for messaging
   rabbit:
     image: rabbitmq:4-management
     hostname: rabbitmq
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "5672:5672"    # AMQP port
+      - "15672:15672"  # Management UI port
     healthcheck:
       test: rabbitmq-diagnostics check_port_connectivity
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 5s
-    <<: *network-deploy-services
+    networks:
+      - eazybank
 
+  # Config Server service for centralized configuration management
   configserver:
-    image: "rahulmore1113/configserver:s6"
+    image: rahulmore1113/configserver:s6
     container_name: configserver-ms
     ports:
       - "8071:8071"
@@ -43,15 +29,23 @@ services:
       rabbit:
         condition: service_healthy
     healthcheck:
-      test: "curl --fail --silent localhost:8071/actuator/health/readiness | grep UP || exit 1"
+      test: curl --fail --silent localhost:8071/actuator/health/readiness | grep UP || exit 1
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 10s
-    <<: *microservice-base-config
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    environment:
+      SPRING_RABBITMQ_HOST: "rabbit"
+    networks:
+      - eazybank
 
+  # Accounts microservice
   accounts:
-    image: "rahulmore1113/accounts:s6"
+    image: rahulmore1113/accounts:s6
     container_name: accounts-ms
     ports:
       - "8080:8080"
@@ -60,10 +54,19 @@ services:
         condition: service_healthy
     environment:
       SPRING_APPLICATION_NAME: "accounts"
-    <<: *microservice-configserver-config
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_CONFIG_IMPORT: "configserver:http://configserver:8071/"
+      SPRING_RABBITMQ_HOST: "rabbit"
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    networks:
+      - eazybank
 
+  # Loans microservice
   loans:
-    image: "rahulmore1113/loans:s6"
+    image: rahulmore1113/loans:s6
     container_name: loans-ms
     ports:
       - "8090:8090"
@@ -72,10 +75,19 @@ services:
         condition: service_healthy
     environment:
       SPRING_APPLICATION_NAME: "loans"
-    <<: *microservice-configserver-config
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_CONFIG_IMPORT: "configserver:http://configserver:8071/"
+      SPRING_RABBITMQ_HOST: "rabbit"
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    networks:
+      - eazybank
 
+  # Cards microservice
   cards:
-    image: "rahulmore1113/cards:s6"
+    image: rahulmore1113/cards:s6
     container_name: cards-ms
     ports:
       - "9000:9000"
@@ -84,8 +96,17 @@ services:
         condition: service_healthy
     environment:
       SPRING_APPLICATION_NAME: "cards"
-    <<: *microservice-configserver-config
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_CONFIG_IMPORT: "configserver:http://configserver:8071/"
+      SPRING_RABBITMQ_HOST: "rabbit"
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    networks:
+      - eazybank
 
+# Define the bridge network used by all services
 networks:
   eazybank:
-    driver: "bridge"
+    driver: bridge
