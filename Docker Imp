@@ -1,0 +1,126 @@
+The proper structure and priority order to follow in a docker-compose.yml file, based on Docker Compose best practices:
+---------------------------------------------------------------------------------------------------------------------
+🔧 Top-Level Structure (Order Matters Slightly)
+---------------------------------------------------------------------------------------------------------------------
+version: "3.8"
+
+services:
+  configserver:
+    ...
+  accounts:
+    ...
+  loans:
+    ...
+  cards:
+    ...
+
+networks:
+  ...
+
+volumes:
+  ...
+---------------------------------------------------------------------------------------------------------------------
+
+✅ Service Definition Priority (Recommended Order Inside Each Service)
+This is the typical priority & logical order inside a service block:
+---------------------------------------------------------------------------------------------------------------------
+services:
+  servicename:
+    container_name: servicename          # 1. Naming clarity
+    image: your-image-name               # 2. Image first
+    build: ./path                        # Optional: if you're building instead of pulling
+    ports:                               # 3. Expose necessary ports
+      - "8080:8080"
+    environment:                         # 4. Environment vars for config
+      - SPRING_PROFILES_ACTIVE=prod
+      - CONFIG_SERVER_URL=http://...
+    depends_on:                          # 5. Order of startup (not guaranteed wait!)
+      - configserver
+    networks:                            # 6. Custom network (logical isolation)
+      - backend
+    volumes:                             # 7. Mount volumes (if DB/data needed)
+      - dbdata:/var/lib/mysql
+    healthcheck:                         # 8. Ensure service is ready
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    deploy:                              # 9. Mostly used in swarm mode
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+---------------------------------------------------------------------------------------------------------------------
+
+🎯 Microservice + Database Structure Example
+Let’s take an example for accounts microservice with its MySQL DB:
+---------------------------------------------------------------------------------------------------------------------
+services:
+  accounts:
+    container_name: accounts-service
+    image: yourrepo/accounts-service:latest
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - CONFIG_SERVER_URL=http://configserver:8888
+      - MYSQL_HOST=accounts-db
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=rootpass
+    depends_on:
+      - configserver
+      - accounts-db
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  accounts-db:
+    container_name: accounts-mysql
+    image: mysql:8
+    environment:
+      - MYSQL_ROOT_PASSWORD=rootpass
+      - MYSQL_DATABASE=accountsdb
+    volumes:
+      - accountsdata:/var/lib/mysql
+    ports:
+      - "3307:3306"
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+---------------------------------------------------------------------------------------------------------------------
+
+🔄 Service Dependency Flow (Logical)
+---------------------------------------------------------------------------------------------------------------------
+configserver → accounts
+                   ↓
+            accounts-db (MySQL)
+---------------------------------------------------------------------------------------------------------------------
+Each service:
+    1. Depends on configserver (for config)
+    2. Has its own database
+    3. Talks over custom backend network
+---------------------------------------------------------------------------------------------------------------------
+
+📌 Component Priority / Execution Relevance
+---------------------------------------------------------------------------------------------------------------------
+Priority	    Component	                                    Reason
+🔴 High	        image, environment, depends_on, healthcheck	    Ensures container runs correctly and in right order
+🟡 Medium	    ports, networks, volumes	                    Ensures connectivity and data persistence
+🟢 Low	        deploy, container_name	                        Mostly cosmetic or used in advanced use cases
+---------------------------------------------------------------------------------------------------------------------
+
+🧠 Notes:
+---------------------------------------------------------------------------------------------------------------------
+1. depends_on does not wait for full readiness. Use healthcheck + retry logic in app.
+2. Use networks to isolate backend microservices (backend) and frontend if needed.
+3. Use volumes to persist DB data (named volumes recommended).
+4. Use .env files for sensitive or repeatable env variables.
+---------------------------------------------------------------------------------------------------------------------
