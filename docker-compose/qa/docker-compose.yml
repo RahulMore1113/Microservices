@@ -3,31 +3,85 @@
 version: "3.8"
 
 services:
-  # RabbitMQ service for messaging
-  rabbit:
-    image: rabbitmq:4-management
-    hostname: rabbitmq
+  # MySQL Docker service for Accounts Microservice
+  accountsdb:
+    image: mysql
+    container_name: accountsdb
     ports:
-      - "5672:5672"    # AMQP port
-      - "15672:15672"  # Management UI port
+      - "3307:3306"
     healthcheck:
-      test: rabbitmq-diagnostics check_port_connectivity
-      interval: 10s
-      timeout: 5s
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 10s
       retries: 10
-      start_period: 5s
+      interval: 10s
+      start_period: 10s
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: accountsdb
     networks:
       - eazybank
 
+  # MySQL Docker service for Loans Microservice
+  loansdb:
+    image: mysql
+    container_name: loansdb
+    ports:
+      - "3308:3306"
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      timeout: 10s
+      retries: 10
+      interval: 10s
+      start_period: 10s
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: loansdb
+    networks:
+      - eazybank
+
+  # MySQL Docker service for Cards Microservice
+  cardsdb:
+    image: mysql
+    container_name: cardsdb
+    ports:
+      - "3309:3306"
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      timeout: 10s
+      retries: 10
+      interval: 10s
+      start_period: 10s
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: cardsdb
+    networks:
+      - eazybank
+
+  # RabbitMQ service for messaging
+  #  rabbit:
+  #    image: rabbitmq:4-management
+  #    hostname: rabbitmq
+  #    ports:
+  #      - "5672:5672"    # AMQP port
+  #      - "15672:15672"  # Management UI port
+  #    healthcheck:
+  #      test: rabbitmq-diagnostics check_port_connectivity
+  #      interval: 10s
+  #      timeout: 5s
+  #      retries: 10
+  #      start_period: 5s
+  #    networks:
+  #      - eazybank
+
   # Config Server service for centralized configuration management
   configserver:
-    image: rahulmore1113/configserver:s6
+    image: rahulmore1113/configserver:s7
     container_name: configserver-ms
     ports:
       - "8071:8071"
-    depends_on:
-      rabbit:
-        condition: service_healthy
+    #    depends_on:
+    #      rabbit:
+    #        condition: service_healthy
     healthcheck:
       test: curl --fail --silent localhost:8071/actuator/health/readiness | grep UP || exit 1
       interval: 10s
@@ -38,25 +92,30 @@ services:
       resources:
         limits:
           memory: 700m
-    environment:
-      SPRING_RABBITMQ_HOST: "rabbit"
+    #    environment:
+    #      SPRING_RABBITMQ_HOST: "rabbit"
     networks:
       - eazybank
 
   # Accounts microservice
   accounts:
-    image: rahulmore1113/accounts:s6
+    image: rahulmore1113/accounts:s7
     container_name: accounts-ms
     ports:
       - "8080:8080"
     depends_on:
+      accountsdb:
+        condition: service_healthy
       configserver:
         condition: service_healthy
     environment:
       SPRING_APPLICATION_NAME: "accounts"
       SPRING_PROFILES_ACTIVE: qa
       SPRING_CONFIG_IMPORT: "configserver:http://configserver:8071/"
-      SPRING_RABBITMQ_HOST: "rabbit"
+    #      SPRING_RABBITMQ_HOST: "rabbit"
+    #      MYSQL_ROOT_PASSWORD: root
+    #      MYSQL_DATABASE: accountsdb
+    #      SPRING_DATASOURCE_URL: jdbc:mysql://accountsdb:3306/accountsdb
     deploy:
       resources:
         limits:
@@ -66,18 +125,23 @@ services:
 
   # Loans microservice
   loans:
-    image: rahulmore1113/loans:s6
+    image: rahulmore1113/loans:s7
     container_name: loans-ms
     ports:
       - "8090:8090"
     depends_on:
+      loansdb:
+        condition: service_healthy
       configserver:
         condition: service_healthy
     environment:
       SPRING_APPLICATION_NAME: "loans"
       SPRING_PROFILES_ACTIVE: qa
       SPRING_CONFIG_IMPORT: "configserver:http://configserver:8071/"
-      SPRING_RABBITMQ_HOST: "rabbit"
+    #      SPRING_RABBITMQ_HOST: "rabbit"
+    #      MYSQL_ROOT_PASSWORD: root
+    #      MYSQL_DATABASE: loansdb
+    #      SPRING_DATASOURCE_URL: jdbc:mysql://loansdb:3306/loansdb
     deploy:
       resources:
         limits:
@@ -87,18 +151,23 @@ services:
 
   # Cards microservice
   cards:
-    image: rahulmore1113/cards:s6
+    image: rahulmore1113/cards:s7
     container_name: cards-ms
     ports:
       - "9000:9000"
     depends_on:
+      cardsdb:
+        condition: service_healthy
       configserver:
         condition: service_healthy
     environment:
       SPRING_APPLICATION_NAME: "cards"
       SPRING_PROFILES_ACTIVE: qa
       SPRING_CONFIG_IMPORT: "configserver:http://configserver:8071/"
-      SPRING_RABBITMQ_HOST: "rabbit"
+    #      SPRING_RABBITMQ_HOST: "rabbit"
+    #      MYSQL_ROOT_PASSWORD: root
+    #      MYSQL_DATABASE: cardsdb
+    #      SPRING_DATASOURCE_URL: jdbc:mysql://cardsdb:3306/cardsdb
     deploy:
       resources:
         limits:
