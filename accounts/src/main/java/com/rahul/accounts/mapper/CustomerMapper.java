@@ -1,5 +1,6 @@
 package com.rahul.accounts.mapper;
 
+import com.rahul.accounts.dto.CustomerDetailsDto;
 import com.rahul.accounts.dto.CustomerDto;
 import com.rahul.accounts.entity.Customer;
 
@@ -12,6 +13,16 @@ public class CustomerMapper {
         customerDto.setMobileNumber(customer.getMobileNumber());
 
         return customerDto;
+
+    }
+
+    public static CustomerDetailsDto mapToCustomerDetailsDto(Customer customer, CustomerDetailsDto customerDetailsDto) {
+
+        customerDetailsDto.setName(customer.getName());
+        customerDetailsDto.setEmail(customer.getEmail());
+        customerDetailsDto.setMobileNumber(customer.getMobileNumber());
+
+        return customerDetailsDto;
 
     }
 
