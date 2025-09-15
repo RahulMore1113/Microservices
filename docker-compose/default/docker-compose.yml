@@ -10,7 +10,7 @@ services:
     ports:
       - "3307:3306"
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
       timeout: 10s
       retries: 10
       interval: 10s
@@ -75,13 +75,13 @@ services:
 
   # Config Server service for centralized configuration management
   configserver:
-    image: rahulmore1113/configserver:s8
+    image: rahulmore1113/configserver:s9
     container_name: configserver-ms
     ports:
       - "8071:8071"
-#    depends_on:
-#      rabbit:
-#        condition: service_healthy
+    #    depends_on:
+    #      rabbit:
+    #        condition: service_healthy
     healthcheck:
       test: curl --fail --silent localhost:8071/actuator/health/readiness | grep UP || exit 1
       interval: 10s
@@ -92,14 +92,14 @@ services:
       resources:
         limits:
           memory: 700m
-#    environment:
-#      SPRING_RABBITMQ_HOST: "rabbit"
+    #    environment:
+    #      SPRING_RABBITMQ_HOST: "rabbit"
     networks:
       - eazybank
 
     # Eureka Server service for service discovery
   eurekaserver:
-    image: rahulmore1113/eurekaserver:s8
+    image: rahulmore1113/eurekaserver:s9
     container_name: eurekaserver-ms
     ports:
       - "8070:8070"
@@ -112,11 +112,11 @@ services:
       configserver:
         condition: service_healthy
     healthcheck:
-      test: curl --fail --silent localhost:8071/actuator/health/readiness | grep UP || exit 1
+      test: curl --fail --silent localhost:8070/actuator/health/readiness | grep UP || exit 1
       interval: 10s
       timeout: 5s
       retries: 10
-      start_period: 30s
+      start_period: 10s
     deploy:
       resources:
         limits:
@@ -127,7 +127,7 @@ services:
 
   # Accounts microservice
   accounts:
-    image: rahulmore1113/accounts:s8
+    image: rahulmore1113/accounts:s9
     container_name: accounts-ms
     ports:
       - "8080:8080"
@@ -136,17 +136,21 @@ services:
         condition: service_healthy
       configserver:
         condition: service_healthy
-#      eurekaserver:
-#        condition: service_healthy
+    healthcheck:
+      test: "curl --fail --silent localhost:8080/actuator/health/readiness | grep UP || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
     environment:
       SPRING_APPLICATION_NAME: "accounts"
       SPRING_PROFILES_ACTIVE: default
       SPRING_CONFIG_IMPORT: "configserver:http://configserver:8071/"
-#      SPRING_RABBITMQ_HOST: "rabbit"
+      #      SPRING_RABBITMQ_HOST: "rabbit"
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: accountsdb
       SPRING_DATASOURCE_URL: jdbc:mysql://accountsdb:3306/accountsdb
-      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: http://eurekaserver:8070/eureka/
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8070/eureka/
     deploy:
       resources:
         limits:
@@ -156,7 +160,7 @@ services:
 
   # Loans microservice
   loans:
-    image: rahulmore1113/loans:s8
+    image: rahulmore1113/loans:s9
     container_name: loans-ms
     ports:
       - "8090:8090"
@@ -165,36 +169,12 @@ services:
         condition: service_healthy
       configserver:
         condition: service_healthy
-#      eurekaserver:
-#        condition: service_healthy
-    environment:
-      SPRING_APPLICATION_NAME: "loans"
-      SPRING_PROFILES_ACTIVE: default
-      SPRING_CONFIG_IMPORT: "configserver:http://configserver:8071/"
-#      SPRING_RABBITMQ_HOST: "rabbit"
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: loansdb
-      SPRING_DATASOURCE_URL: jdbc:mysql://loansdb:3306/loansdb
-      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: http://eurekaserver:8070/eureka/
-    deploy:
-      resources:
-        limits:
-          memory: 700m
-    networks:
-      - eazybank
-
-  loans1:
-    image: rahulmore1113/loans:s8
-    container_name: loans1-ms
-    ports:
-      - "8091:8090"
-    depends_on:
-      loansdb:
-        condition: service_healthy
-      configserver:
-        condition: service_healthy
-    #      eurekaserver:
-    #        condition: service_healthy
+    healthcheck:
+      test: "curl --fail --silent localhost:8090/actuator/health/readiness | grep UP || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
     environment:
       SPRING_APPLICATION_NAME: "loans"
       SPRING_PROFILES_ACTIVE: default
@@ -203,7 +183,7 @@ services:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: loansdb
       SPRING_DATASOURCE_URL: jdbc:mysql://loansdb:3306/loansdb
-      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: http://eurekaserver:8070/eureka/
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8070/eureka/
     deploy:
       resources:
         limits:
@@ -211,9 +191,41 @@ services:
     networks:
       - eazybank
 
+  #  loans1:
+  #    image: rahulmore1113/loans:s9
+  #    container_name: loans1-ms
+  #    ports:
+  #      - "8091:8090"
+  #    depends_on:
+  #      loansdb:
+  #        condition: service_healthy
+  #      configserver:
+  #        condition: service_healthy
+  #    healthcheck:
+  #      test: "curl --fail --silent localhost:8091/actuator/health/readiness | grep UP || exit 1"
+  #      interval: 10s
+  #      timeout: 5s
+  #      retries: 10
+  #      start_period: 10s
+  #    environment:
+  #      SPRING_APPLICATION_NAME: "loans"
+  #      SPRING_PROFILES_ACTIVE: default
+  #      SPRING_CONFIG_IMPORT: "configserver:http://configserver:8071/"
+  ##      SPRING_RABBITMQ_HOST: "rabbit"
+  #      MYSQL_ROOT_PASSWORD: root
+  #      MYSQL_DATABASE: loansdb
+  #      SPRING_DATASOURCE_URL: jdbc:mysql://loansdb:3306/loansdb
+  #      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8070/eureka/
+  #    deploy:
+  #      resources:
+  #        limits:
+  #          memory: 700m
+  #    networks:
+  #      - eazybank
+
   # Cards microservice
   cards:
-    image: rahulmore1113/cards:s8
+    image: rahulmore1113/cards:s9
     container_name: cards-ms
     ports:
       - "9000:9000"
@@ -222,21 +234,54 @@ services:
         condition: service_healthy
       configserver:
         condition: service_healthy
-#      eurekaserver:
-#        condition: service_healthy
+    healthcheck:
+      test: "curl --fail --silent localhost:9000/actuator/health/readiness | grep UP || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
     environment:
       SPRING_APPLICATION_NAME: "cards"
       SPRING_PROFILES_ACTIVE: default
       SPRING_CONFIG_IMPORT: "configserver:http://configserver:8071/"
-#      SPRING_RABBITMQ_HOST: "rabbit"
+      #      SPRING_RABBITMQ_HOST: "rabbit"
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: cardsdb
       SPRING_DATASOURCE_URL: jdbc:mysql://cardsdb:3306/cardsdb
-      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: http://eurekaserver:8070/eureka/
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8070/eureka/
     deploy:
       resources:
         limits:
           memory: 700m
+    networks:
+      - eazybank
+
+  # Gateway Server service for API Routing
+  gatewayserver:
+    image: rahulmore1113/gatewayserver:s9
+    container_name: gatewayserver-ms
+    ports:
+      - "8072:8072"
+    depends_on:
+      accounts:
+        condition: service_healthy
+      loans:
+        condition: service_healthy
+      cards:
+        condition: service_healthy
+      configserver:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_NAME: "gatewayserver"
+      SPRING_PROFILES_ACTIVE: default
+      SPRING_CONFIG_IMPORT: "configserver:http://configserver:8071/"
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8070/eureka/
+    healthcheck:
+      test: [ "CMD-SHELL", "curl --fail --silent localhost:8072/actuator/health/readiness | grep UP || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
     networks:
       - eazybank
 
