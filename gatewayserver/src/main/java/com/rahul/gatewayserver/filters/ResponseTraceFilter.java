@@ -24,18 +24,18 @@ public class ResponseTraceFilter {
 
     @Bean
     public GlobalFilter postGlobalFilter() {
-
         return (exchange, chain) ->
                 chain.filter(exchange)
-                        .then(Mono.fromRunnable(() -> {
-                            Optional.ofNullable(filterUtility.getCorrelationId(exchange.getRequest().getHeaders()))
-                                    .ifPresent(correlationId -> {
-                                        exchange.getResponse().getHeaders()
-                                                .add(FilterUtility.CORRELATION_ID, correlationId);
-                                        logger.debug("Added correlation id to response headers: {}", correlationId);
-                                    });
-                        }));
-
+                        .then(Mono.fromRunnable(() ->
+                                Optional.ofNullable(filterUtility.getCorrelationId(exchange.getRequest().getHeaders()))
+                                        .filter(correlationId -> !exchange.getResponse().getHeaders()
+                                                .containsKey(FilterUtility.CORRELATION_ID))
+                                        .ifPresent(correlationId -> {
+                                            exchange.getResponse().getHeaders()
+                                                    .add(FilterUtility.CORRELATION_ID, correlationId);
+                                            logger.debug("Added correlation id to response headers: {}", correlationId);
+                                        })
+                        ));
     }
 
 }
